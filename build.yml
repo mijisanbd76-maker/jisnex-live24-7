@@ -1,0 +1,33 @@
+name: Build JISNEX Live APK
+on:
+  push:
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: 8.5
+      # repo তে project.zip থাকলে সেটা খুলে বিল্ড করবে, নইলে সরাসরি repo র ফাইল থেকে
+      - name: Prepare project
+        run: |
+          if [ -f project.zip ]; then
+            rm -rf _proj && mkdir _proj && unzip -q project.zip -d _proj
+            S=$(find _proj -name settings.gradle | head -1)
+            echo "PROJ=$(dirname "$S")" >> "$GITHUB_ENV"
+          else
+            echo "PROJ=." >> "$GITHUB_ENV"
+          fi
+      - name: Build debug APK
+        run: cd "$PROJ" && gradle assembleDebug --stacktrace
+      - uses: actions/upload-artifact@v4
+        with:
+          name: JISNEX-Live-APK
+          path: "**/build/outputs/apk/debug/*.apk"
